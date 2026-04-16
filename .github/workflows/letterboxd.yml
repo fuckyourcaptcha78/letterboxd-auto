@@ -50,8 +50,26 @@ jobs:
           git commit -m "Update last post"
           git push
 
-      - name: Output post (for now)
-        if: steps.check.outputs.skip == 'false'
-        run: |
-echo "Watched $TITLE - My thoughts are up"
-echo "$LINK"
+      - name: Post to Bluesky
+  if: steps.check.outputs.skip == 'false'
+  run: |
+    TEXT="Watched $TITLE — thoughts are up: $LINK"
+
+    curl -X POST https://bsky.social/xrpc/com.atproto.server.createSession \
+      -H "Content-Type: application/json" \
+      -d "{\"identifier\":\"readjunk.bsky.social",\"password\":\"x6e7-pzks-hdtf-arii"}" \
+      > session.json
+
+    ACCESS=$(jq -r '.accessJwt' session.json)
+
+    curl -X POST https://bsky.social/xrpc/com.atproto.repo.createRecord \
+      -H "Authorization: Bearer $ACCESS" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"repo\": \"readjunk.bsky.social",
+        \"collection\": \"app.bsky.feed.post\",
+        \"record\": {
+          \"text\": \"$TEXT\",
+          \"createdAt\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"
+        }
+      }"
