@@ -1,0 +1,57 @@
+name: Letterboxd Auto Post
+
+on:
+  schedule:
+    - cron: "0 * * * *" # every hour
+  workflow_dispatch:
+
+jobs:
+  post-review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Get latest review
+        run: |
+          curl -s https://letterboxd.com/YOURUSERNAME/rss/ > feed.xml
+          
+          TITLE=$(grep -o '<title>.*</title>' feed.xml | head -n 2 | tail -n 1 | sed 's/<[^>]*>//g')
+          LINK=$(grep -o '<link>.*</link>' feed.xml | head -n 2 | tail -n 1 | sed 's/<[^>]*>//g')
+
+          echo "TITLE=$TITLE" >> $GITHUB_ENV
+          echo "LINK=$LINK" >> $GITHUB_ENV
+
+      - name: Check last post
+        id: check
+        run: |
+          if [ -f last_post.txt ]; then
+            LAST=$(cat last_post.txt)
+          else
+            LAST=""
+          fi
+
+          if [ "$LAST" = "$LINK" ]; then
+            echo "No new review"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "New review found"
+            echo "$LINK" > last_post.txt
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit last post
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add last_post.txt
+          git commit -m "Update last post"
+          git push
+
+      - name: Output post (for now)
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          echo "🎬 $TITLE"
+          echo "Read more: $LINK"
