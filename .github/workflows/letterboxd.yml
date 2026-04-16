@@ -23,23 +23,6 @@ jobs:
           echo "TITLE=$TITLE" >> $GITHUB_ENV
           echo "LINK=$LINK" >> $GITHUB_ENV
 
-      - name: Check last post
-        id: check
-        run: |
-          if [ -f last_post.txt ]; then
-            LAST=$(cat last_post.txt)
-          else
-            LAST=""
-          fi
-
-          if [ "$LAST" = "$LINK" ]; then
-            echo "No new review"
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "New review found"
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
