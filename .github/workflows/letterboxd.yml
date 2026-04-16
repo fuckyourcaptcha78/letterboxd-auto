@@ -53,5 +53,5 @@ jobs:
       - name: Output post (for now)
         if: steps.check.outputs.skip == 'false'
         run: |
-          echo "🎬 $TITLE"
-          echo "Read more: $LINK"
+echo "Watched $TITLE - My thoughts are up"
+echo "$LINK"
