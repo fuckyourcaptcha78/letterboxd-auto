@@ -26,18 +26,33 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Post to Bluesky
-  if: steps.check.outputs.skip == 'false'
-  run: |
-    TEXT="Watched $TITLE - thoughts are up: $LINK"
+           - name: Post to Bluesky
+        run: |
+          echo "TITLE: $TITLE"
+          echo "LINK: $LINK"
 
-    SESSION=$(curl -s -X POST https://bsky.social/xrpc/com.atproto.server.createSession \
-      -H "Content-Type: application/json" \
-      -d "{\"identifier\":\"$BSKY_USER\",\"password\":\"$BSKY_PASS\"}")
+          TEXT="Watched $TITLE - $LINK"
 
-    ACCESS=$(echo "$SESSION" | jq -r '.accessJwt')
+          echo "Logging in..."
 
-    curl -s -X POST https://bsky.social/xrpc/com.atproto.repo.createRecord \
-      -H "Authorization: Bearer $ACCESS" \
-      -H "Content-Type: application/json" \
-      -d "{\"repo\":\"$BSKY_USER\",\"collection\":\"app.bsky.feed.post\",\"record\":{\"text\":\"$TEXT\",\"createdAt\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}}"
+          SESSION=$(curl -s -X POST https://bsky.social/xrpc/com.atproto.server.createSession \
+            -H "Content-Type: application/json" \
+            -d "{\"identifier\":\"$BSKY_USER\",\"password\":\"$BSKY_PASS\"}")
+
+          echo "Session:"
+          echo $SESSION
+
+          ACCESS=$(echo "$SESSION" | jq -r '.accessJwt')
+
+          echo "Access token:"
+          echo $ACCESS
+
+          echo "Posting..."
+
+          RESPONSE=$(curl -s -X POST https://bsky.social/xrpc/com.atproto.repo.createRecord \
+            -H "Authorization: Bearer $ACCESS" \
+            -H "Content-Type: application/json" \
+            -d "{\"repo\":\"$BSKY_USER\",\"collection\":\"app.bsky.feed.post\",\"record\":{\"text\":\"$TEXT\",\"createdAt\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}}")
+
+          echo "Response:"
+          echo $RESPONSE
