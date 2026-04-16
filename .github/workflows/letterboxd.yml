@@ -29,30 +29,15 @@ jobs:
       - name: Post to Bluesky
   if: steps.check.outputs.skip == 'false'
   run: |
-    TEXT="Watched $TITLE — thoughts are up: $LINK"
+    TEXT="Watched $TITLE - thoughts are up: $LINK"
 
-    # Login
     SESSION=$(curl -s -X POST https://bsky.social/xrpc/com.atproto.server.createSession \
       -H "Content-Type: application/json" \
       -d "{\"identifier\":\"$BSKY_USER\",\"password\":\"$BSKY_PASS\"}")
 
-    ACCESS=$(echo $SESSION | jq -r '.accessJwt')
+    ACCESS=$(echo "$SESSION" | jq -r '.accessJwt')
 
-    # Debug (temporary)
-    echo "Access token length: ${#ACCESS}"
-
-    # Post
-    RESPONSE=$(curl -s -X POST https://bsky.social/xrpc/com.atproto.repo.createRecord \
+    curl -s -X POST https://bsky.social/xrpc/com.atproto.repo.createRecord \
       -H "Authorization: Bearer $ACCESS" \
       -H "Content-Type: application/json" \
-      -d "{
-        \"repo\": \"$BSKY_USER\",
-        \"collection\": \"app.bsky.feed.post\",
-        \"record\": {
-          \"text\": \"$TEXT\",
-          \"createdAt\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"
-        }
-      }")
-
-    echo "Response:"
-    echo $RESPONSE
+      -d "{\"repo\":\"$BSKY_USER\",\"collection\":\"app.bsky.feed.post\",\"record\":{\"text\":\"$TEXT\",\"createdAt\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}}"
