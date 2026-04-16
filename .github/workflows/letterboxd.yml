@@ -2,7 +2,7 @@ name: Letterboxd Auto Post
 
 on:
   schedule:
-    - cron: "0 * * * *" # every hour
+    - cron: "0 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
 
       - name: Get latest review
         run: |
-          curl -s https://letterboxd.com/YOURUSERNAME/rss/ > feed.xml
+          curl -s https://letterboxd.com/readjunk/rss/ > feed.xml
           
           TITLE=$(grep -o '<title>.*</title>' feed.xml | head -n 2 | tail -n 1 | sed 's/<[^>]*>//g')
           LINK=$(grep -o '<link>.*</link>' feed.xml | head -n 2 | tail -n 1 | sed 's/<[^>]*>//g')
@@ -37,33 +37,32 @@ jobs:
             echo "skip=true" >> $GITHUB_OUTPUT
           else
             echo "New review found"
-            echo "$LINK" > last_post.txt
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Install jq
-  run: sudo apt-get install -y jq
+        run: sudo apt-get update && sudo apt-get install -y jq
 
-- name: Post to Bluesky
-  if: steps.check.outputs.skip == 'false'
-  run: |
-    TEXT="Watched $TITLE — thoughts are up: $LINK"
+      - name: Post to Bluesky
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          TEXT="Watched $TITLE — thoughts are up: $LINK"
 
-    curl -X POST https://bsky.social/xrpc/com.atproto.server.createSession \
-      -H "Content-Type: application/json" \
-      -d "{\"identifier\":\"$BSKY_USER\",\"password\":\"$BSKY_PASS\"}" \
-      > session.json
+          curl -s -X POST https://bsky.social/xrpc/com.atproto.server.createSession \
+            -H "Content-Type: application/json" \
+            -d "{\"identifier\":\"$BSKY_USER\",\"password\":\"$BSKY_PASS\"}" \
+            > session.json
 
-    ACCESS=$(jq -r '.accessJwt' session.json)
+          ACCESS=$(jq -r '.accessJwt' session.json)
 
-    curl -X POST https://bsky.social/xrpc/com.atproto.repo.createRecord \
-      -H "Authorization: Bearer $ACCESS" \
-      -H "Content-Type: application/json" \
-      -d "{
-        \"repo\": \"$BSKY_USER\",
-        \"collection\": \"app.bsky.feed.post\",
-        \"record\": {
-          \"text\": \"$TEXT\",
-          \"createdAt\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"
-        }
-      }"
+          curl -X POST https://bsky.social/xrpc/com.atproto.repo.createRecord \
+            -H "Authorization: Bearer $ACCESS" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"repo\": \"$BSKY_USER\",
+              \"collection\": \"app.bsky.feed.post\",
+              \"record\": {
+                \"text\": \"$TEXT\",
+                \"createdAt\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"
+              }
+            }"
